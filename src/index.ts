@@ -16,8 +16,8 @@ program.name('postcommit').description('Drafts build-in-public tweets from your 
 program.command('init').description('One-time setup: install shell hook, launchd, OpenAI key').action(runInit);
 program.command('tweet').description('Draft a tweet from commits since your last one').action(runTweet);
 program.command('list').description('Show tracked repos and pending commit counts').action(runList);
-program.command('add <path>').description('Add a repo to track').action(runAdd);
-program.command('remove <path>').description('Stop tracking a repo').action(runRemove);
+program.command('add <slug>').description('Add a GitHub repo to track (e.g. enzo0525/toasty-app)').action(runAdd);
+program.command('remove <slug>').description('Stop tracking a repo by slug').action(runRemove);
 program.command('style').description('Edit the AI voice prompt in $EDITOR').action(runStyle);
 program.command('banner').description('Print the terminal banner (called by shell hook)').action(runBanner);
 program.command('refresh').description('Refresh the cache from GitHub (called by launchd)').action(runRefresh);

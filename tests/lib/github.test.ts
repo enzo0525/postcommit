@@ -7,7 +7,9 @@ import { execa } from 'execa';
 import {
   countCommitsSince,
   fetchCommitsSince,
-  getRepoSlugFromRemote,
+  getAuthedUserLogin,
+  listUserGitHubRepos,
+  getLatestCommitSha,
   type Commit,
 } from '../../src/lib/github.js';
 
@@ -51,22 +53,53 @@ describe('github', () => {
     ]);
   });
 
-  it('getRepoSlugFromRemote parses ssh + https remotes', async () => {
+  it('listUserGitHubRepos parses a single JSON array response', async () => {
     execaMock.mockResolvedValueOnce({
-      stdout: 'origin\tgit@github.com:enzo/ascend.git (fetch)\norigin\tgit@github.com:enzo/ascend.git (push)',
+      stdout: JSON.stringify([
+        {
+          full_name: 'enzo0525/toasty-app',
+          name: 'toasty-app',
+          owner: { login: 'enzo0525' },
+          pushed_at: '2026-05-11T12:00:00Z',
+          fork: false,
+        },
+      ]),
     } as never);
-    expect(await getRepoSlugFromRemote('/p/ascend')).toBe('enzo/ascend');
-
-    execaMock.mockResolvedValueOnce({
-      stdout: 'origin\thttps://github.com/enzo/ascend.git (fetch)',
-    } as never);
-    expect(await getRepoSlugFromRemote('/p/ascend')).toBe('enzo/ascend');
+    const repos = await listUserGitHubRepos();
+    expect(repos).toEqual([
+      {
+        slug: 'enzo0525/toasty-app',
+        displayName: 'toasty-app',
+        ownerLogin: 'enzo0525',
+        pushedAt: '2026-05-11T12:00:00Z',
+        isFork: false,
+      },
+    ]);
   });
 
-  it('getRepoSlugFromRemote returns null for non-GitHub remotes', async () => {
+  it('listUserGitHubRepos parses concatenated arrays from --paginate', async () => {
     execaMock.mockResolvedValueOnce({
-      stdout: 'origin\tgit@gitlab.com:enzo/ascend.git (fetch)',
+      stdout:
+        `[{"full_name":"enzo0525/a","name":"a","owner":{"login":"enzo0525"},"pushed_at":"2026-01-01T00:00:00Z","fork":false}]` +
+        `[{"full_name":"enzo0525/b","name":"b","owner":{"login":"enzo0525"},"pushed_at":"2026-02-01T00:00:00Z","fork":false}]`,
     } as never);
-    expect(await getRepoSlugFromRemote('/p/ascend')).toBeNull();
+    const repos = await listUserGitHubRepos();
+    expect(repos.map((r) => r.slug)).toEqual(['enzo0525/a', 'enzo0525/b']);
+  });
+
+  it('listUserGitHubRepos returns [] on gh failure', async () => {
+    execaMock.mockRejectedValueOnce(new Error('gh not authed'));
+    const repos = await listUserGitHubRepos();
+    expect(repos).toEqual([]);
+  });
+
+  it('getAuthedUserLogin returns trimmed login', async () => {
+    execaMock.mockResolvedValueOnce({ stdout: 'enzo0525\n' } as never);
+    expect(await getAuthedUserLogin()).toBe('enzo0525');
+  });
+
+  it('getLatestCommitSha returns commit SHA', async () => {
+    execaMock.mockResolvedValueOnce({ stdout: 'abc123def\n' } as never);
+    expect(await getLatestCommitSha('enzo0525/toasty-app')).toBe('abc123def');
   });
 });

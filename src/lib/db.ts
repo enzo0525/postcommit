@@ -3,8 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { paths } from './paths.js';
 
 export interface Repo {
-  path: string;
-  githubSlug: string;
+  slug: string;
   displayName: string;
   lastTweetedSha: string | null;
   lastTweetedAt: string | null;
@@ -12,8 +11,7 @@ export interface Repo {
 }
 
 export interface NewRepo {
-  path: string;
-  githubSlug: string;
+  slug: string;
   displayName: string;
   lastTweetedSha: string | null;
 }
@@ -34,8 +32,7 @@ export function openDb(): Database {
   db.exec('PRAGMA journal_mode = WAL;');
   db.exec(`
     CREATE TABLE IF NOT EXISTS repos (
-      path             TEXT PRIMARY KEY,
-      github_slug      TEXT NOT NULL,
+      slug             TEXT PRIMARY KEY,
       display_name     TEXT NOT NULL,
       last_tweeted_sha TEXT,
       last_tweeted_at  TEXT,
@@ -63,29 +60,27 @@ export function addRepo(r: NewRepo): void {
   const db = openDb();
   db.prepare(
     `INSERT OR REPLACE INTO repos
-     (path, github_slug, display_name, last_tweeted_sha, last_tweeted_at, added_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(r.path, r.githubSlug, r.displayName, r.lastTweetedSha, new Date().toISOString(), new Date().toISOString());
+     (slug, display_name, last_tweeted_sha, last_tweeted_at, added_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).run(r.slug, r.displayName, r.lastTweetedSha, new Date().toISOString(), new Date().toISOString());
 }
 
 export function listRepos(): Repo[] {
   const db = openDb();
   const rows = db
     .prepare(
-      `SELECT path, github_slug, display_name, last_tweeted_sha,
+      `SELECT slug, display_name, last_tweeted_sha,
               last_tweeted_at, added_at FROM repos ORDER BY display_name`,
     )
     .all() as Array<{
-      path: string;
-      github_slug: string;
+      slug: string;
       display_name: string;
       last_tweeted_sha: string | null;
       last_tweeted_at: string | null;
       added_at: string;
     }>;
   return rows.map((r) => ({
-    path: r.path,
-    githubSlug: r.github_slug,
+    slug: r.slug,
     displayName: r.display_name,
     lastTweetedSha: r.last_tweeted_sha,
     lastTweetedAt: r.last_tweeted_at,
@@ -93,17 +88,17 @@ export function listRepos(): Repo[] {
   }));
 }
 
-export function removeRepo(path: string): number {
+export function removeRepo(slug: string): number {
   const db = openDb();
-  const info = db.prepare('DELETE FROM repos WHERE path = ?').run(path);
+  const info = db.prepare('DELETE FROM repos WHERE slug = ?').run(slug);
   return info.changes;
 }
 
-export function updateLastTweetedSha(path: string, sha: string, isoAt: string): void {
+export function updateLastTweetedSha(slug: string, sha: string, isoAt: string): void {
   const db = openDb();
   db.prepare(
-    'UPDATE repos SET last_tweeted_sha = ?, last_tweeted_at = ? WHERE path = ?',
-  ).run(sha, isoAt, path);
+    'UPDATE repos SET last_tweeted_sha = ?, last_tweeted_at = ? WHERE slug = ?',
+  ).run(sha, isoAt, slug);
 }
 
 export function insertTweet(t: NewTweet): number {

@@ -38,11 +38,11 @@ async function gatherCommits(): Promise<{
       mostRecentTweetAt = Math.max(mostRecentTweetAt, new Date(r.lastTweetedAt).getTime());
     }
     const since = r.lastTweetedAt ?? new Date(0).toISOString();
-    const commits: Commit[] = await fetchCommitsSince(r.githubSlug, since);
+    const commits: Commit[] = await fetchCommitsSince(r.slug, since);
     if (commits.length === 0) continue;
     repoInputs.push({ name: r.displayName, commits });
     const latest = commits[0];
-    if (latest) perRepoLatest.set(r.path, { sha: latest.sha, at: latest.at });
+    if (latest) perRepoLatest.set(r.slug, { sha: latest.sha, at: latest.at });
   }
 
   const daysSince = mostRecentTweetAt
@@ -61,8 +61,8 @@ async function editDraft(draft: string): Promise<string> {
 }
 
 function commitAllRepos(perRepoLatest: Map<string, { sha: string; at: string }>): void {
-  for (const [path, info] of perRepoLatest) {
-    updateLastTweetedSha(path, info.sha, info.at);
+  for (const [slug, info] of perRepoLatest) {
+    updateLastTweetedSha(slug, info.sha, info.at);
   }
 }
 

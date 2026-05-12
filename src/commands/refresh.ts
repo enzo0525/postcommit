@@ -10,7 +10,7 @@ export async function runRefresh(): Promise<void> {
 
   for (const r of repos) {
     const since = r.lastTweetedAt ?? new Date(0).toISOString();
-    const count = await countCommitsSince(r.githubSlug, since);
+    const count = await countCommitsSince(r.slug, since);
     if (count > 0) byRepo.push({ displayName: r.displayName, pending: count });
     total += count;
     if (r.lastTweetedAt && (!mostRecentTweetAt || r.lastTweetedAt > mostRecentTweetAt)) {

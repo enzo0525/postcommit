@@ -32,8 +32,8 @@ Run `tweet`. It pulls your commits, drafts a tweet via GPT-4o-mini, asks `[a]ppr
 - `postcommit init` — one-time setup
 - `postcommit tweet` — draft from new commits
 - `postcommit list` — show tracked repos and pending counts
-- `postcommit add <path>` — track a new repo
-- `postcommit remove <path>` — stop tracking
+- `postcommit add <slug>` — track a new repo (e.g. enzo0525/toasty-app)
+- `postcommit remove <slug>` — stop tracking (e.g. enzo0525/toasty-app)
 - `postcommit style` — edit the AI voice prompt
 - `postcommit refresh` — re-pull commits (auto-runs every 15 min via launchd)
 

@@ -11,6 +11,22 @@ interface GhApiCommit {
   commit: { message: string; author: { date: string } };
 }
 
+export interface GitHubRepo {
+  slug: string;
+  displayName: string;
+  ownerLogin: string;
+  pushedAt: string;
+  isFork: boolean;
+}
+
+interface GhApiRepo {
+  full_name: string;
+  name: string;
+  owner: { login: string };
+  pushed_at: string;
+  fork: boolean;
+}
+
 export async function countCommitsSince(slug: string, sinceIso: string): Promise<number> {
   try {
     const { stdout } = await execa('gh', [
@@ -45,29 +61,59 @@ export async function fetchCommitsSince(slug: string, sinceIso: string): Promise
   }
 }
 
-const REMOTE_PATTERNS = [
-  /git@github\.com:([\w-]+\/[\w.-]+?)(?:\.git)?\s/,
-  /https:\/\/github\.com\/([\w-]+\/[\w.-]+?)(?:\.git)?\s/,
-];
-
-export async function getRepoSlugFromRemote(repoPath: string): Promise<string | null> {
+export async function getAuthedUserLogin(): Promise<string | null> {
   try {
-    const { stdout } = await execa('git', ['-C', repoPath, 'remote', '-v']);
-    const padded = `${stdout}\n`;
-    for (const re of REMOTE_PATTERNS) {
-      const m = padded.match(re);
-      if (m && m[1]) return m[1];
-    }
-    return null;
+    const { stdout } = await execa('gh', ['api', 'user', '-q', '.login']);
+    return stdout.trim() || null;
   } catch {
     return null;
   }
 }
 
-export async function getHeadSha(repoPath: string): Promise<string | null> {
+export async function listUserGitHubRepos(): Promise<GitHubRepo[]> {
   try {
-    const { stdout } = await execa('git', ['-C', repoPath, 'rev-parse', 'HEAD']);
-    return stdout.trim();
+    const { stdout } = await execa('gh', [
+      'api',
+      '--paginate',
+      '-X', 'GET',
+      'user/repos',
+      '-f', 'per_page=100',
+      '-f', 'sort=pushed',
+      '-f', 'direction=desc',
+    ]);
+    const parsed = parseConcatenatedJson(stdout);
+    return parsed.map((r): GitHubRepo => ({
+      slug: r.full_name,
+      displayName: r.name,
+      ownerLogin: r.owner.login,
+      pushedAt: r.pushed_at,
+      isFork: r.fork,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function parseConcatenatedJson(s: string): GhApiRepo[] {
+  // gh --paginate emits multiple JSON arrays back-to-back. Find each top-level array boundary
+  // and concatenate. Simple approach: greedy split on `][` insertion point.
+  const trimmed = s.trim();
+  if (!trimmed) return [];
+  try { return JSON.parse(trimmed) as GhApiRepo[]; } catch { /* fall through */ }
+  // Concatenated arrays: replace `][` with `,`
+  const merged = trimmed.replace(/\]\s*\[/g, ',');
+  try { return JSON.parse(merged) as GhApiRepo[]; } catch { return []; }
+}
+
+export async function getLatestCommitSha(slug: string): Promise<string | null> {
+  try {
+    const { stdout } = await execa('gh', [
+      'api',
+      `repos/${slug}/commits`,
+      '-f', 'per_page=1',
+      '-q', '.[0].sha',
+    ]);
+    return stdout.trim() || null;
   } catch {
     return null;
   }

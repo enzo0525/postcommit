@@ -1,26 +1,21 @@
-import { resolve, basename } from 'node:path';
-import { existsSync } from 'node:fs';
 import chalk from 'chalk';
 import { addRepo } from '../lib/db.js';
-import { getRepoSlugFromRemote, getHeadSha } from '../lib/github.js';
+import { getLatestCommitSha } from '../lib/github.js';
 
-export async function runAdd(rawPath: string): Promise<void> {
-  const path = resolve(rawPath);
-  if (!existsSync(path)) {
-    console.error(chalk.red(`No such directory: ${path}`));
+export async function runAdd(slug: string): Promise<void> {
+  if (!/^[\w-]+\/[\w.-]+$/.test(slug)) {
+    console.error(chalk.red(
+      `Invalid slug: ${slug}. Expected format: owner/repo (e.g. enzo0525/toasty-app)`,
+    ));
     process.exit(1);
   }
-  const slug = await getRepoSlugFromRemote(path);
-  if (!slug) {
-    console.error(chalk.red(`No GitHub remote found in ${path}`));
+  const head = await getLatestCommitSha(slug);
+  if (head === null) {
+    console.error(chalk.red(
+      `Could not fetch ${slug} from GitHub. Check the slug or run \`gh auth status\`.`,
+    ));
     process.exit(1);
   }
-  const headSha = await getHeadSha(path);
-  addRepo({
-    path,
-    githubSlug: slug,
-    displayName: basename(path),
-    lastTweetedSha: headSha,
-  });
-  console.log(chalk.green(`Added ${basename(path)} (${slug})`));
+  addRepo({ slug, displayName: slug.split('/')[1] ?? slug, lastTweetedSha: head });
+  console.log(chalk.green(`Added ${slug}`));
 }

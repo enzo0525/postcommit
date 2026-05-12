@@ -1,37 +1,28 @@
-import { readdirSync, statSync, existsSync, writeFileSync, chmodSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { writeFileSync, chmodSync, mkdirSync } from 'node:fs';
 import chalk from 'chalk';
 import enquirer from 'enquirer';
 import { openDb, addRepo } from '../lib/db.js';
-import { getRepoSlugFromRemote, getHeadSha } from '../lib/github.js';
+import {
+  getAuthedUserLogin,
+  listUserGitHubRepos,
+  getLatestCommitSha,
+  type GitHubRepo,
+} from '../lib/github.js';
 import { writeDefaultStyle } from '../lib/style.js';
 import { installShellHook, installAlias, installLaunchdPlist } from '../lib/hooks.js';
 import { paths } from '../lib/paths.js';
 import { runRefresh } from './refresh.js';
 
-interface Candidate {
-  path: string;
-  slug: string;
-  displayName: string;
-}
-
-async function discoverRepos(): Promise<Candidate[]> {
-  const projectsDir = join(homedir(), 'Projects');
-  if (!existsSync(projectsDir)) return [];
-  const entries = readdirSync(projectsDir);
-  const candidates: Candidate[] = [];
-  for (const name of entries) {
-    const path = join(projectsDir, name);
-    try {
-      if (!statSync(path).isDirectory()) continue;
-      if (!existsSync(join(path, '.git'))) continue;
-    } catch { continue; }
-    const slug = await getRepoSlugFromRemote(path);
-    if (!slug) continue;
-    candidates.push({ path, slug, displayName: name });
-  }
-  return candidates;
+async function discoverFromGitHub(authedLogin: string | null): Promise<{
+  repos: GitHubRepo[];
+  defaultSelected: GitHubRepo[];
+}> {
+  const all = await listUserGitHubRepos();
+  const nonFork = all.filter((r) => !r.isFork);
+  const defaultSelected = authedLogin
+    ? nonFork.filter((r) => r.ownerLogin === authedLogin)
+    : nonFork;
+  return { repos: nonFork, defaultSelected };
 }
 
 async function promptApiKey(): Promise<string> {
@@ -53,20 +44,30 @@ function writeEnvFile(apiKey: string): void {
   chmodSync(paths.envFile(), 0o600);
 }
 
-async function promptRepoSelection(candidates: Candidate[]): Promise<Candidate[]> {
-  if (candidates.length === 0) {
-    console.log(chalk.dim('No GitHub repos found under ~/Projects. You can `postcommit add <path>` later.'));
+async function promptRepoSelection(
+  repos: GitHubRepo[],
+  defaultSelected: GitHubRepo[],
+): Promise<GitHubRepo[]> {
+  if (repos.length === 0) {
+    console.log(chalk.dim(
+      'No GitHub repos found via `gh api user/repos`. Are you logged in with `gh auth login`?',
+    ));
     return [];
   }
+  const defaultSet = new Set(defaultSelected.map((r) => r.slug));
+  const initial: number[] = [];
+  repos.forEach((r, i) => { if (defaultSet.has(r.slug)) initial.push(i); });
   const { selected } = await enquirer.prompt<{ selected: string[] }>({
     type: 'multiselect',
     name: 'selected',
-    message: 'Which repos should PostCommit track?',
-    choices: candidates.map((c) => ({ name: c.path, message: `${c.displayName}  (${c.slug})` })),
-    // enquirer accepts number[] for multiselect initial at runtime; cast needed due to type definition gap
-    initial: candidates.map((_, i) => i) as unknown as number,
+    message: `Which repos should PostCommit track? (${defaultSelected.length}/${repos.length} pre-selected; space to toggle, enter to confirm)`,
+    choices: repos.map((r) => ({
+      name: r.slug,
+      message: `${r.displayName.padEnd(28)} ${chalk.dim(r.slug)} ${chalk.dim(`· pushed ${r.pushedAt.slice(0, 10)}`)}`,
+    })),
+    initial: initial as unknown as number,
   } as Parameters<typeof enquirer.prompt>[0]);
-  return candidates.filter((c) => selected.includes(c.path));
+  return repos.filter((r) => selected.includes(r.slug));
 }
 
 async function promptAlias(): Promise<boolean> {
@@ -90,11 +91,19 @@ export async function runInit(): Promise<void> {
 
   openDb(); // ensures schema
 
-  const candidates = await discoverRepos();
-  const selected = await promptRepoSelection(candidates);
-  for (const c of selected) {
-    const head = await getHeadSha(c.path);
-    addRepo({ path: c.path, githubSlug: c.slug, displayName: c.displayName, lastTweetedSha: head });
+  console.log(chalk.dim('Fetching your GitHub repos...'));
+  const authedLogin = await getAuthedUserLogin();
+  if (!authedLogin) {
+    console.error(chalk.red('GitHub CLI not authenticated. Run `gh auth login` and try again.'));
+    process.exit(1);
+  }
+  console.log(chalk.dim(`Authenticated as ${authedLogin}.`));
+
+  const { repos: ghRepos, defaultSelected } = await discoverFromGitHub(authedLogin);
+  const selected = await promptRepoSelection(ghRepos, defaultSelected);
+  for (const r of selected) {
+    const head = await getLatestCommitSha(r.slug);
+    addRepo({ slug: r.slug, displayName: r.displayName, lastTweetedSha: head });
   }
   console.log(chalk.green(`✓ Tracking ${selected.length} repo${selected.length === 1 ? '' : 's'}`));
 

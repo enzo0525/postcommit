@@ -1,13 +1,11 @@
-import { resolve } from 'node:path';
 import chalk from 'chalk';
 import { removeRepo } from '../lib/db.js';
 
-export async function runRemove(rawPath: string): Promise<void> {
-  const path = resolve(rawPath);
-  const changes = removeRepo(path);
+export async function runRemove(slug: string): Promise<void> {
+  const changes = removeRepo(slug);
   if (changes === 0) {
-    console.log(chalk.dim(`No tracked repo at ${path}`));
+    console.log(chalk.dim(`No tracked repo with slug ${slug}`));
     return;
   }
-  console.log(chalk.green(`Removed ${path}`));
+  console.log(chalk.green(`Removed ${slug}`));
 }

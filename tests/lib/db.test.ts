@@ -40,16 +40,14 @@ describe('db', () => {
   it('addRepo + listRepos roundtrip', () => {
     openDb();
     addRepo({
-      path: '/p/ascend',
-      githubSlug: 'enzo/ascend',
+      slug: 'enzo/ascend',
       displayName: 'Ascend',
       lastTweetedSha: 'abc123',
     });
     const repos = listRepos();
     expect(repos).toHaveLength(1);
     expect(repos[0]).toMatchObject({
-      path: '/p/ascend',
-      githubSlug: 'enzo/ascend',
+      slug: 'enzo/ascend',
       displayName: 'Ascend',
       lastTweetedSha: 'abc123',
     });
@@ -58,7 +56,7 @@ describe('db', () => {
   it('addRepo initializes lastTweetedAt to current time', () => {
     openDb();
     const before = Date.now();
-    addRepo({ path: '/p/a', githubSlug: 's', displayName: 'A', lastTweetedSha: 'x' });
+    addRepo({ slug: 'enzo/a', displayName: 'A', lastTweetedSha: 'x' });
     const after = Date.now();
     const r = listRepos()[0];
     expect(r?.lastTweetedAt).not.toBeNull();
@@ -67,33 +65,33 @@ describe('db', () => {
     expect(ts).toBeLessThanOrEqual(after);
   });
 
-  it('addRepo is idempotent on path conflict (REPLACE)', () => {
+  it('addRepo is idempotent on slug conflict (REPLACE)', () => {
     openDb();
-    addRepo({ path: '/p/a', githubSlug: 's', displayName: 'A', lastTweetedSha: 'x' });
-    addRepo({ path: '/p/a', githubSlug: 's2', displayName: 'A2', lastTweetedSha: 'y' });
+    addRepo({ slug: 'enzo/a', displayName: 'A', lastTweetedSha: 'x' });
+    addRepo({ slug: 'enzo/a', displayName: 'A2', lastTweetedSha: 'y' });
     const repos = listRepos();
     expect(repos).toHaveLength(1);
-    expect(repos[0]?.githubSlug).toBe('s2');
+    expect(repos[0]?.displayName).toBe('A2');
   });
 
-  it('removeRepo deletes by path', () => {
+  it('removeRepo deletes by slug', () => {
     openDb();
-    addRepo({ path: '/p/a', githubSlug: 's', displayName: 'A', lastTweetedSha: 'x' });
-    addRepo({ path: '/p/b', githubSlug: 't', displayName: 'B', lastTweetedSha: 'y' });
-    removeRepo('/p/a');
+    addRepo({ slug: 'enzo/a', displayName: 'A', lastTweetedSha: 'x' });
+    addRepo({ slug: 'enzo/b', displayName: 'B', lastTweetedSha: 'y' });
+    removeRepo('enzo/a');
     const repos = listRepos();
-    expect(repos.map((r: Repo) => r.path)).toEqual(['/p/b']);
+    expect(repos.map((r: Repo) => r.slug)).toEqual(['enzo/b']);
   });
 
-  it('removeRepo returns 0 when path not found', () => {
+  it('removeRepo returns 0 when slug not found', () => {
     openDb();
-    expect(removeRepo('/no/such/path')).toBe(0);
+    expect(removeRepo('enzo/no-such-repo')).toBe(0);
   });
 
   it('updateLastTweetedSha updates sha and timestamp', () => {
     openDb();
-    addRepo({ path: '/p/a', githubSlug: 's', displayName: 'A', lastTweetedSha: 'old' });
-    updateLastTweetedSha('/p/a', 'new', '2026-05-12T10:00:00Z');
+    addRepo({ slug: 'enzo/a', displayName: 'A', lastTweetedSha: 'old' });
+    updateLastTweetedSha('enzo/a', 'new', '2026-05-12T10:00:00Z');
     const r = listRepos()[0];
     expect(r?.lastTweetedSha).toBe('new');
     expect(r?.lastTweetedAt).toBe('2026-05-12T10:00:00Z');
