@@ -46,6 +46,10 @@ export function openDb(): Database {
       repos_json  TEXT NOT NULL,
       created_at  TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS excluded_slugs (
+      slug         TEXT PRIMARY KEY,
+      excluded_at  TEXT NOT NULL
+    );
   `);
   _db = db;
   return db;
@@ -63,6 +67,8 @@ export function addRepo(r: NewRepo): void {
      (slug, display_name, last_tweeted_sha, last_tweeted_at, added_at)
      VALUES (?, ?, ?, ?, ?)`,
   ).run(r.slug, r.displayName, r.lastTweetedSha, new Date().toISOString(), new Date().toISOString());
+  // Re-adding a repo clears any prior exclusion.
+  db.prepare(`DELETE FROM excluded_slugs WHERE slug = ?`).run(r.slug);
 }
 
 export function listRepos(): Repo[] {
@@ -91,7 +97,30 @@ export function listRepos(): Repo[] {
 export function removeRepo(slug: string): number {
   const db = openDb();
   const info = db.prepare('DELETE FROM repos WHERE slug = ?').run(slug);
+  // Always add to exclusion list, even if the DELETE was a no-op (user might be excluding
+  // a repo they never tracked but don't want auto-discovered).
+  db.prepare(
+    `INSERT OR IGNORE INTO excluded_slugs (slug, excluded_at) VALUES (?, ?)`,
+  ).run(slug, new Date().toISOString());
   return info.changes;
+}
+
+export function addExcluded(slug: string): void {
+  const db = openDb();
+  db.prepare(
+    `INSERT OR IGNORE INTO excluded_slugs (slug, excluded_at) VALUES (?, ?)`,
+  ).run(slug, new Date().toISOString());
+}
+
+export function removeExcluded(slug: string): void {
+  const db = openDb();
+  db.prepare(`DELETE FROM excluded_slugs WHERE slug = ?`).run(slug);
+}
+
+export function listExcludedSlugs(): string[] {
+  const db = openDb();
+  const rows = db.prepare(`SELECT slug FROM excluded_slugs`).all() as Array<{ slug: string }>;
+  return rows.map((r) => r.slug);
 }
 
 export function updateLastTweetedSha(slug: string, sha: string, isoAt: string): void {
