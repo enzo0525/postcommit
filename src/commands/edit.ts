@@ -15,7 +15,7 @@ function buildChoices(repos: GitHubRepo[], trackedSet: Set<string>): {
   repos.forEach((r, i) => { if (trackedSet.has(r.slug)) initial.push(i); });
   const choices = repos.map((r) => ({
     name: r.slug,
-    message: `${r.displayName.padEnd(28)} ${chalk.dim(r.slug)} ${chalk.dim(`· pushed ${r.pushedAt.slice(0, 10)}`)}`,
+    message: `${r.slug}  ${chalk.dim('· ' + r.pushedAt.slice(0, 10))}`,
   }));
   return { choices, initial };
 }
