@@ -1,0 +1,117 @@
+import Database from 'better-sqlite3';
+import { mkdirSync } from 'node:fs';
+import { paths } from './paths.js';
+
+export interface Repo {
+  path: string;
+  githubSlug: string;
+  displayName: string;
+  lastTweetedSha: string | null;
+  lastTweetedAt: string | null;
+  addedAt: string;
+}
+
+export interface NewRepo {
+  path: string;
+  githubSlug: string;
+  displayName: string;
+  lastTweetedSha: string | null;
+}
+
+export interface NewTweet {
+  draft: string;
+  final: string | null;
+  status: 'approved' | 'edited' | 'skipped';
+  repos: string[];
+}
+
+let _db: Database.Database | null = null;
+
+export function openDb(): Database.Database {
+  if (_db) return _db;
+  mkdirSync(paths.configDir(), { recursive: true });
+  const db = new Database(paths.dbFile());
+  db.pragma('journal_mode = WAL');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS repos (
+      path             TEXT PRIMARY KEY,
+      github_slug      TEXT NOT NULL,
+      display_name     TEXT NOT NULL,
+      last_tweeted_sha TEXT,
+      last_tweeted_at  TEXT,
+      added_at         TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS tweets (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      draft       TEXT NOT NULL,
+      final       TEXT,
+      status      TEXT NOT NULL,
+      repos_json  TEXT NOT NULL,
+      created_at  TEXT NOT NULL
+    );
+  `);
+  _db = db;
+  return db;
+}
+
+export function closeDb(): void {
+  _db?.close();
+  _db = null;
+}
+
+export function addRepo(r: NewRepo): void {
+  const db = openDb();
+  db.prepare(
+    `INSERT OR REPLACE INTO repos
+     (path, github_slug, display_name, last_tweeted_sha, last_tweeted_at, added_at)
+     VALUES (?, ?, ?, ?, NULL, ?)`,
+  ).run(r.path, r.githubSlug, r.displayName, r.lastTweetedSha, new Date().toISOString());
+}
+
+export function listRepos(): Repo[] {
+  const db = openDb();
+  const rows = db
+    .prepare(
+      `SELECT path, github_slug, display_name, last_tweeted_sha,
+              last_tweeted_at, added_at FROM repos ORDER BY display_name`,
+    )
+    .all() as Array<{
+      path: string;
+      github_slug: string;
+      display_name: string;
+      last_tweeted_sha: string | null;
+      last_tweeted_at: string | null;
+      added_at: string;
+    }>;
+  return rows.map((r) => ({
+    path: r.path,
+    githubSlug: r.github_slug,
+    displayName: r.display_name,
+    lastTweetedSha: r.last_tweeted_sha,
+    lastTweetedAt: r.last_tweeted_at,
+    addedAt: r.added_at,
+  }));
+}
+
+export function removeRepo(path: string): void {
+  const db = openDb();
+  db.prepare('DELETE FROM repos WHERE path = ?').run(path);
+}
+
+export function updateLastTweetedSha(path: string, sha: string, isoAt: string): void {
+  const db = openDb();
+  db.prepare(
+    'UPDATE repos SET last_tweeted_sha = ?, last_tweeted_at = ? WHERE path = ?',
+  ).run(sha, isoAt, path);
+}
+
+export function insertTweet(t: NewTweet): number {
+  const db = openDb();
+  const info = db
+    .prepare(
+      `INSERT INTO tweets (draft, final, status, repos_json, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    )
+    .run(t.draft, t.final ?? null, t.status, JSON.stringify(t.repos), new Date().toISOString());
+  return Number(info.lastInsertRowid);
+}
