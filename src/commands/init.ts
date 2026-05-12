@@ -1,7 +1,7 @@
 import { writeFileSync, chmodSync, mkdirSync } from 'node:fs';
 import chalk from 'chalk';
 import enquirer from 'enquirer';
-import { openDb, addRepo } from '../lib/db.js';
+import { openDb, addRepo, addExcluded } from '../lib/db.js';
 import {
   getAuthedUserLogin,
   listUserGitHubRepos,
@@ -101,11 +101,18 @@ export async function runInit(): Promise<void> {
 
   const { repos: ghRepos, defaultSelected } = await discoverFromGitHub(authedLogin);
   const selected = await promptRepoSelection(ghRepos, defaultSelected);
+  const selectedSet = new Set(selected.map((r) => r.slug));
   for (const r of selected) {
     const head = await getLatestCommitSha(r.slug);
     addRepo({ slug: r.slug, displayName: r.displayName, lastTweetedSha: head });
   }
-  console.log(chalk.green(`✓ Tracking ${selected.length} repo${selected.length === 1 ? '' : 's'}`));
+  // Anything the user unchecked gets excluded so refresh's auto-discovery respects their choice.
+  const unselected = ghRepos.filter((r) => !selectedSet.has(r.slug));
+  for (const r of unselected) addExcluded(r.slug);
+  console.log(chalk.green(
+    `✓ Tracking ${selected.length} repo${selected.length === 1 ? '' : 's'}` +
+    (unselected.length > 0 ? chalk.dim(` (${unselected.length} excluded)`) : ''),
+  ));
 
   writeDefaultStyle();
   console.log(chalk.green('✓ Default style.txt written'));

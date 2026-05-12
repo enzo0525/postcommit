@@ -17,6 +17,7 @@ export interface GitHubRepo {
   ownerLogin: string;
   pushedAt: string;
   isFork: boolean;
+  isArchived: boolean;
 }
 
 interface GhApiRepo {
@@ -25,6 +26,7 @@ interface GhApiRepo {
   owner: { login: string };
   pushed_at: string;
   fork: boolean;
+  archived: boolean;
 }
 
 export async function countCommitsSince(slug: string, sinceIso: string): Promise<number> {
@@ -88,6 +90,7 @@ export async function listUserGitHubRepos(): Promise<GitHubRepo[]> {
       ownerLogin: r.owner.login,
       pushedAt: r.pushed_at,
       isFork: r.fork,
+      isArchived: r.archived,
     }));
   } catch {
     return [];

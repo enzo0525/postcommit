@@ -62,6 +62,7 @@ describe('github', () => {
           owner: { login: 'enzo0525' },
           pushed_at: '2026-05-11T12:00:00Z',
           fork: false,
+          archived: false,
         },
       ]),
     } as never);
@@ -73,6 +74,7 @@ describe('github', () => {
         ownerLogin: 'enzo0525',
         pushedAt: '2026-05-11T12:00:00Z',
         isFork: false,
+        isArchived: false,
       },
     ]);
   });
@@ -80,8 +82,8 @@ describe('github', () => {
   it('listUserGitHubRepos parses concatenated arrays from --paginate', async () => {
     execaMock.mockResolvedValueOnce({
       stdout:
-        `[{"full_name":"enzo0525/a","name":"a","owner":{"login":"enzo0525"},"pushed_at":"2026-01-01T00:00:00Z","fork":false}]` +
-        `[{"full_name":"enzo0525/b","name":"b","owner":{"login":"enzo0525"},"pushed_at":"2026-02-01T00:00:00Z","fork":false}]`,
+        `[{"full_name":"enzo0525/a","name":"a","owner":{"login":"enzo0525"},"pushed_at":"2026-01-01T00:00:00Z","fork":false,"archived":false}]` +
+        `[{"full_name":"enzo0525/b","name":"b","owner":{"login":"enzo0525"},"pushed_at":"2026-02-01T00:00:00Z","fork":false,"archived":false}]`,
     } as never);
     const repos = await listUserGitHubRepos();
     expect(repos.map((r) => r.slug)).toEqual(['enzo0525/a', 'enzo0525/b']);

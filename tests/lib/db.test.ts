@@ -11,6 +11,9 @@ import {
   removeRepo,
   updateLastTweetedSha,
   insertTweet,
+  addExcluded,
+  removeExcluded,
+  listExcludedSlugs,
   type Repo,
 } from '../../src/lib/db.js';
 
@@ -34,7 +37,7 @@ describe('db', () => {
         "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
       )
       .all() as Array<{ name: string }>;
-    expect(tables.map((t) => t.name)).toEqual(['repos', 'tweets']);
+    expect(tables.map((t) => t.name)).toEqual(['excluded_slugs', 'repos', 'tweets']);
   });
 
   it('addRepo + listRepos roundtrip', () => {
@@ -106,5 +109,47 @@ describe('db', () => {
       repos: ['enzo/ascend'],
     });
     expect(id).toBeGreaterThan(0);
+  });
+
+  it('addExcluded + listExcludedSlugs roundtrip', () => {
+    openDb();
+    addExcluded('enzo/foo');
+    addExcluded('enzo/bar');
+    expect(listExcludedSlugs().sort()).toEqual(['enzo/bar', 'enzo/foo']);
+  });
+
+  it('addExcluded is idempotent', () => {
+    openDb();
+    addExcluded('enzo/foo');
+    addExcluded('enzo/foo');
+    expect(listExcludedSlugs()).toEqual(['enzo/foo']);
+  });
+
+  it('removeRepo also excludes the slug', () => {
+    openDb();
+    addRepo({ slug: 'enzo/foo', displayName: 'foo', lastTweetedSha: 'x' });
+    removeRepo('enzo/foo');
+    expect(listRepos()).toHaveLength(0);
+    expect(listExcludedSlugs()).toEqual(['enzo/foo']);
+  });
+
+  it('removeRepo can exclude a slug that was never tracked', () => {
+    openDb();
+    expect(removeRepo('enzo/never-tracked')).toBe(0);
+    expect(listExcludedSlugs()).toEqual(['enzo/never-tracked']);
+  });
+
+  it('addRepo clears any prior exclusion', () => {
+    openDb();
+    addExcluded('enzo/foo');
+    addRepo({ slug: 'enzo/foo', displayName: 'foo', lastTweetedSha: 'x' });
+    expect(listExcludedSlugs()).toEqual([]);
+  });
+
+  it('removeExcluded deletes from the exclusion list', () => {
+    openDb();
+    addExcluded('enzo/foo');
+    removeExcluded('enzo/foo');
+    expect(listExcludedSlugs()).toEqual([]);
   });
 });
