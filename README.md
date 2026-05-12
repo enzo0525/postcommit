@@ -5,7 +5,7 @@ Drafts build-in-public tweets from your recent git commits. Lives in your termin
 ## Install
 
 ```bash
-git clone https://github.com/<you>/postcommit
+git clone https://github.com/enzo0525/postcommit
 cd postcommit
 bun install
 bun link
@@ -20,8 +20,10 @@ Open a new terminal tab — if you've pushed commits since your last tweet, a on
 
 ```
 ┌─ tweet queue ─────────────────────────┐
-│  4 commits · Ascend (3), Toasty (1)   │
-│  last tweet: 3d ago · run `tweet`     │
+│ toasty-app (3)                        │
+│ ascnd-web (2)                         │
+│ portfolio (1)                         │
+│ last tweet: 3d ago · run `tweet`      │
 └───────────────────────────────────────┘
 ```
 
@@ -59,8 +61,8 @@ bun unlink
 ## Development
 
 ```bash
-bun run test         # vitest
+bun test             # bun's built-in test runner
 bun run typecheck    # tsc --noEmit
 bun run lint         # oxlint
-bun run dev <cmd>    # tsx src/index.ts <cmd>
+bun run dev <cmd>    # bun src/index.ts <cmd>
 ```
