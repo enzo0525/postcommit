@@ -98,6 +98,7 @@ export async function runTweet(): Promise<void> {
   if (action === 'skip') {
     insertTweet({ draft, final: null, status: 'skipped', repos: repoInputs.map((r) => r.name) });
     commitAllRepos(perRepoLatest);
+    await runRefresh();
     console.log(chalk.dim('Skipped. Commits marked as seen.'));
     return;
   }
@@ -111,5 +112,6 @@ export async function runTweet(): Promise<void> {
     repos: repoInputs.map((r) => r.name),
   });
   commitAllRepos(perRepoLatest);
+  await runRefresh();
   console.log(chalk.green('Copied to clipboard. Paste into x.com.'));
 }
