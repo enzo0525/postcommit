@@ -1,0 +1,36 @@
+{
+  "name": "postcommit",
+  "version": "0.1.0",
+  "description": "Drafts build-in-public tweets from your recent git commits.",
+  "type": "module",
+  "bin": {
+    "postcommit": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint src tests"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.5.0",
+    "chalk": "^5.3.0",
+    "commander": "^13.0.0",
+    "enquirer": "^2.4.1",
+    "execa": "^9.5.2",
+    "openai": "^4.77.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.0",
+    "oxlint": "^0.15.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
