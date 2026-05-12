@@ -8,6 +8,7 @@ import { runRemove } from './commands/remove.js';
 import { runStyle } from './commands/style.js';
 import { runBanner } from './commands/banner.js';
 import { runRefresh } from './commands/refresh.js';
+import { runEdit } from './commands/edit.js';
 
 const program = new Command();
 
@@ -16,6 +17,7 @@ program.name('postcommit').description('Drafts build-in-public tweets from your 
 program.command('init').description('One-time setup: install shell hook, launchd, OpenAI key').action(runInit);
 program.command('tweet').description('Draft a tweet from commits since your last one').action(runTweet);
 program.command('list').description('Show tracked repos and pending commit counts').action(runList);
+program.command('edit').description('Toggle which GitHub repos are tracked (multiselect UI)').action(runEdit);
 program.command('add <slug>').description('Add a GitHub repo to track (e.g. enzo0525/toasty-app)').action(runAdd);
 program.command('remove <slug>').description('Stop tracking a repo by slug').action(runRemove);
 program.command('style').description('Edit the AI voice prompt in $EDITOR').action(runStyle);

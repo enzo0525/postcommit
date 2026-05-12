@@ -63,7 +63,7 @@ async function promptRepoSelection(
     message: `Which repos should PostCommit track? (${defaultSelected.length}/${repos.length} pre-selected; space to toggle, enter to confirm)`,
     choices: repos.map((r) => ({
       name: r.slug,
-      message: `${r.displayName.padEnd(28)} ${chalk.dim(r.slug)} ${chalk.dim(`· pushed ${r.pushedAt.slice(0, 10)}`)}`,
+      message: `${r.slug}  ${chalk.dim('· ' + r.pushedAt.slice(0, 10))}`,
     })),
     initial: initial as unknown as number,
   } as Parameters<typeof enquirer.prompt>[0]);
