@@ -64,8 +64,8 @@ export function addRepo(r: NewRepo): void {
   db.prepare(
     `INSERT OR REPLACE INTO repos
      (path, github_slug, display_name, last_tweeted_sha, last_tweeted_at, added_at)
-     VALUES (?, ?, ?, ?, NULL, ?)`,
-  ).run(r.path, r.githubSlug, r.displayName, r.lastTweetedSha, new Date().toISOString());
+     VALUES (?, ?, ?, ?, ?, ?)`,
+  ).run(r.path, r.githubSlug, r.displayName, r.lastTweetedSha, new Date().toISOString(), new Date().toISOString());
 }
 
 export function listRepos(): Repo[] {
@@ -93,9 +93,10 @@ export function listRepos(): Repo[] {
   }));
 }
 
-export function removeRepo(path: string): void {
+export function removeRepo(path: string): number {
   const db = openDb();
-  db.prepare('DELETE FROM repos WHERE path = ?').run(path);
+  const info = db.prepare('DELETE FROM repos WHERE path = ?').run(path);
+  return info.changes;
 }
 
 export function updateLastTweetedSha(path: string, sha: string, isoAt: string): void {

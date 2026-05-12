@@ -58,6 +58,12 @@ describe('hooks', () => {
     const plist = readFileSync(paths.plistFile(), 'utf8');
     expect(plist).toContain('com.enzo.postcommit.refresh');
     expect(plist).toContain('<integer>900</integer>');
-    expect(plist).toContain('<string>postcommit</string>');
+    expect(plist).toMatch(/<string>[^<]*postcommit<\/string>/);
+  });
+
+  it('installAlias writes .alias sentinel file', () => {
+    writeFileSync(paths.zshrc(), '');
+    installAlias();
+    expect(existsSync(join(paths.configDir(), '.alias'))).toBe(true);
   });
 });

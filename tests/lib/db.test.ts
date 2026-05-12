@@ -55,6 +55,18 @@ describe('db', () => {
     });
   });
 
+  it('addRepo initializes lastTweetedAt to current time', () => {
+    openDb();
+    const before = Date.now();
+    addRepo({ path: '/p/a', githubSlug: 's', displayName: 'A', lastTweetedSha: 'x' });
+    const after = Date.now();
+    const r = listRepos()[0];
+    expect(r?.lastTweetedAt).not.toBeNull();
+    const ts = new Date(r!.lastTweetedAt!).getTime();
+    expect(ts).toBeGreaterThanOrEqual(before);
+    expect(ts).toBeLessThanOrEqual(after);
+  });
+
   it('addRepo is idempotent on path conflict (REPLACE)', () => {
     openDb();
     addRepo({ path: '/p/a', githubSlug: 's', displayName: 'A', lastTweetedSha: 'x' });
@@ -71,6 +83,11 @@ describe('db', () => {
     removeRepo('/p/a');
     const repos = listRepos();
     expect(repos.map((r: Repo) => r.path)).toEqual(['/p/b']);
+  });
+
+  it('removeRepo returns 0 when path not found', () => {
+    openDb();
+    expect(removeRepo('/no/such/path')).toBe(0);
   });
 
   it('updateLastTweetedSha updates sha and timestamp', () => {

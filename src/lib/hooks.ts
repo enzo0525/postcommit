@@ -5,7 +5,7 @@ import {
   existsSync,
   appendFileSync,
 } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { execa } from 'execa';
 import { paths } from './paths.js';
 
@@ -37,9 +37,22 @@ export function installShellHook(): void {
 
 export function installAlias(): void {
   appendOnce(ALIAS_LINE);
+  mkdirSync(paths.configDir(), { recursive: true });
+  writeFileSync(join(paths.configDir(), '.alias'), '', 'utf8');
 }
 
-function plistXml(): string {
+async function resolveBin(name: string): Promise<string | null> {
+  try {
+    const { stdout } = await execa('which', [name]);
+    return stdout.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+async function plistXml(): Promise<string> {
+  const postcommitPath = (await resolveBin('postcommit')) ?? 'postcommit';
+  const ghPath = (await resolveBin('gh')) ?? 'gh';
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -48,9 +61,14 @@ function plistXml(): string {
   <string>com.enzo.postcommit.refresh</string>
   <key>ProgramArguments</key>
   <array>
-    <string>postcommit</string>
+    <string>${postcommitPath}</string>
     <string>refresh</string>
   </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>${ghPath.replace(/\/gh$/, '')}:/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin</string>
+  </dict>
   <key>StartInterval</key>
   <integer>900</integer>
   <key>RunAtLoad</key>
@@ -67,7 +85,7 @@ function plistXml(): string {
 export async function installLaunchdPlist(): Promise<void> {
   const file = paths.plistFile();
   mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, plistXml(), 'utf8');
+  writeFileSync(file, await plistXml(), 'utf8');
   try {
     await execa('launchctl', ['unload', file]);
   } catch { /* not loaded yet — fine */ }

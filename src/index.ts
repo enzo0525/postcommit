@@ -1,4 +1,4 @@
-#!/usr/bin/env -S node --experimental-strip-types
+#!/usr/bin/env bun
 import { Command } from 'commander';
 import { runInit } from './commands/init.js';
 import { runTweet } from './commands/tweet.js';

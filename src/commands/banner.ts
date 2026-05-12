@@ -1,8 +1,10 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import chalk from 'chalk';
 import { readCache, type RepoCount } from '../lib/cache.js';
+import { paths } from '../lib/paths.js';
 
 const ORANGE = '#d08770';
-const ALIAS_FILE_LINE = `[ -f ${process.env['HOME'] ?? ''}/.postcommit/.alias ]`;
 
 function ageString(iso: string | null): string {
   if (!iso) return 'never';
@@ -24,9 +26,7 @@ function repoSummary(repos: RepoCount[]): string {
 }
 
 function tweetCmd(): string {
-  // If user installed the alias during init, we drop a sentinel file.
-  // For MVP we just always show `tweet` — init asks first and we trust the user.
-  return 'tweet';
+  return existsSync(join(paths.configDir(), '.alias')) ? 'tweet' : 'postcommit tweet';
 }
 
 function pad(text: string, width: number): string {
@@ -57,5 +57,4 @@ export async function runBanner(): Promise<void> {
   }
 }
 
-// silence unused-var warning for ALIAS_FILE_LINE — reserved for future alias-detection
-void ALIAS_FILE_LINE;
+
