@@ -53,7 +53,7 @@ The clipboard copy is the MVP integration with X — the user pastes into x.com 
 - `postcommit init` — one-time setup
 - `postcommit tweet` — the main flow described above
 - `postcommit list` — show tracked repos and pending commit counts
-- `postcommit add <path>` / `postcommit remove <path>` — manage tracked repos
+- `postcommit add <path>` / `postcommit remove <path>` — manage tracked repos (`add` sets `last_tweeted_sha` to the repo's current `HEAD`, so newly added repos don't backfill historical commits)
 - `postcommit style` — open the system prompt in `$EDITOR`
 - `postcommit banner` — internal; called by the shell hook
 - `postcommit refresh` — internal; called by launchd every 15 min
