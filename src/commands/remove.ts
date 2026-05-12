@@ -1,3 +1,3 @@
-export async function runRemove(path: string): Promise<void> {
+export async function runRemove(_path: string): Promise<void> {
   throw new Error('not yet implemented');
 }

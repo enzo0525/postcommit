@@ -181,7 +181,7 @@ Expected: exits 0 (no errors — there are no `.ts` files yet).
 - [ ] **Step 7: Commit**
 
 ```bash
-git add package.json tsconfig.json vitest.config.ts .gitignore bun.lockb
+git add package.json tsconfig.json vitest.config.ts .gitignore bun.lock
 git commit -m "Scaffold postcommit project (Node 22 + TS + vitest)"
 ```
 
