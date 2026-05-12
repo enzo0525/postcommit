@@ -60,6 +60,7 @@ describe('hooks', () => {
     expect(plist).toContain('com.enzo.postcommit.refresh');
     expect(plist).toContain('<integer>900</integer>');
     expect(plist).toMatch(/<string>[^<]*postcommit<\/string>/);
+    expect(plist).toMatch(/<key>PATH<\/key>\s*<string>[^<]+<\/string>/);
   });
 
   it('installAlias writes .alias sentinel file', () => {

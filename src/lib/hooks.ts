@@ -50,9 +50,15 @@ async function resolveBin(name: string): Promise<string | null> {
   }
 }
 
+function xmlEscape(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 async function plistXml(): Promise<string> {
   const postcommitPath = (await resolveBin('postcommit')) ?? 'postcommit';
-  const ghPath = (await resolveBin('gh')) ?? 'gh';
+  // Inherit the user's actual PATH so `env bun` works when launchd invokes the shebang.
+  // launchd does NOT inherit shell PATH by default.
+  const userPath = process.env['PATH'] ?? '/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin';
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -61,13 +67,13 @@ async function plistXml(): Promise<string> {
   <string>com.enzo.postcommit.refresh</string>
   <key>ProgramArguments</key>
   <array>
-    <string>${postcommitPath}</string>
+    <string>${xmlEscape(postcommitPath)}</string>
     <string>refresh</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>
     <key>PATH</key>
-    <string>${ghPath.replace(/\/gh$/, '')}:/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin</string>
+    <string>${xmlEscape(userPath)}</string>
   </dict>
   <key>StartInterval</key>
   <integer>900</integer>
