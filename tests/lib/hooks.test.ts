@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setHome, paths } from '../../src/lib/paths.js';
 
-vi.mock('execa', () => ({ execa: vi.fn().mockResolvedValue({ stdout: '' }) }));
+const execaMock = mock(() => Promise.resolve({ stdout: '' } as never));
+mock.module('execa', () => ({ execa: execaMock }));
 
 import {
   installShellHook,

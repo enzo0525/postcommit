@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { Database } from 'bun:sqlite';
 import { mkdirSync } from 'node:fs';
 import { paths } from './paths.js';
 
@@ -25,13 +25,13 @@ export interface NewTweet {
   repos: string[];
 }
 
-let _db: Database.Database | null = null;
+let _db: Database | null = null;
 
-export function openDb(): Database.Database {
+export function openDb(): Database {
   if (_db) return _db;
   mkdirSync(paths.configDir(), { recursive: true });
   const db = new Database(paths.dbFile());
-  db.pragma('journal_mode = WAL');
+  db.exec('PRAGMA journal_mode = WAL;');
   db.exec(`
     CREATE TABLE IF NOT EXISTS repos (
       path             TEXT PRIMARY KEY,

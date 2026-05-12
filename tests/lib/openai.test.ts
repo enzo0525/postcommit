@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, mock, beforeEach } from 'bun:test';
 
-const createMock = vi.fn();
+const createMock = mock(() => Promise.resolve({ choices: [{ message: { content: '' } }] } as never));
 
-vi.mock('openai', () => ({
-  default: vi.fn().mockImplementation(() => ({
+mock.module('openai', () => ({
+  default: mock(() => ({
     chat: { completions: { create: createMock } },
   })),
 }));
@@ -16,7 +16,7 @@ describe('openai', () => {
   it('passes system prompt + commits JSON and returns draft text', async () => {
     createMock.mockResolvedValueOnce({
       choices: [{ message: { content: 'shipped paywall on ascend today  ' } }],
-    });
+    } as never);
     const out = await draftTweet({
       apiKey: 'sk-x',
       systemPrompt: 'be casual',
@@ -40,14 +40,15 @@ describe('openai', () => {
         ],
       }),
     );
-    const callArg = createMock.mock.calls[0]![0];
-    const userJson = JSON.parse(callArg.messages[1].content);
+    // bun:test mock.calls is a tuple — cast through unknown to access runtime shape
+    const callArg = (createMock.mock.calls[0] as unknown as [Record<string, unknown>])[0]!;
+    const userJson = JSON.parse((callArg['messages'] as Array<{ content: string }>)[1]!.content);
     expect(userJson.repos[0].name).toBe('Ascend');
     expect(userJson.days_since_last_tweet).toBe(3);
   });
 
   it('throws when OpenAI returns empty content', async () => {
-    createMock.mockResolvedValueOnce({ choices: [{ message: { content: null } }] });
+    createMock.mockResolvedValueOnce({ choices: [{ message: { content: null } }] } as never);
     await expect(
       draftTweet({
         apiKey: 'sk-x',

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'bun:test';
 import { paths, setHome } from '../../src/lib/paths.js';
 
 describe('paths', () => {
